@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSITO Production — Motion</title>
+<link rel="stylesheet" href="fonts/poppins.css">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --panel: #181716;
+    --gold: #c9a66b;
+    --cream: #f3efe6;
+    --grey: #8d8a85;
+    --line: #2a2826;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #000; height: 100%; overflow: hidden; }
+  body { display: grid; place-items: center; font-family: 'Poppins', system-ui, sans-serif; color: var(--cream); }
+
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--bg); transform-origin: center center; flex: none;
+  }
+  .abs { position: absolute; }
+  .scene { position: absolute; inset: 0; }
+  .label { font-size: 22px; font-weight: 500; letter-spacing: .08em; color: var(--gold); text-transform: uppercase; }
+  .label::after { content: ''; display: block; width: 58px; height: 2px; background: var(--gold); margin-top: 10px; }
+  .h { font-weight: 800; letter-spacing: -.02em; line-height: 1.02; color: var(--cream); }
+  .w { display: inline-block; }
+  .grey { color: var(--grey); font-weight: 300; }
+  .gold { color: var(--gold); }
+
+  /* Grain + vignette */
+  #grain { position: absolute; inset: -120px; pointer-events: none; opacity: .07; mix-blend-mode: screen; z-index: 50;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 49;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%); }
+
+  /* Header (persistent) */
+  #hdr { position: absolute; left: 140px; right: 140px; top: 60px; height: 50px; z-index: 40; }
+  #hdr .brand { position: absolute; left: 0; top: 0; font-size: 20px; font-weight: 700; letter-spacing: .04em; }
+  #hdr .count { position: absolute; right: 0; top: 0; font-size: 20px; color: var(--grey); font-variant-numeric: tabular-nums; }
+  #hdr .rule { position: absolute; left: 0; right: 0; top: 44px; height: 1px; background: var(--line); transform-origin: left; }
+
+  /* Rings */
+  #panel { position: absolute; top: 0; bottom: 0; right: 0; width: 728px; background: var(--panel); }
+  #rings { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+
+  /* Services */
+  .svc { position: absolute; left: 140px; top: 400px; width: 1640px; height: 330px; overflow: hidden; }
+  .svc .num { position: absolute; left: 0; top: 0; font-size: 210px; font-weight: 200; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+  .svc .name { position: absolute; left: 330px; top: 30px; font-size: 140px; font-weight: 800; letter-spacing: -.03em; line-height: 1; white-space: nowrap; }
+  .svc .desc { position: absolute; left: 336px; top: 200px; font-size: 40px; font-weight: 300; color: var(--grey); white-space: nowrap; }
+  .tick { position: absolute; top: 880px; height: 4px; width: 210px; background: var(--line); overflow: hidden; }
+  .tick i { position: absolute; inset: 0; background: var(--gold); transform-origin: left; transform: scaleX(0); }
+
+  /* Gold wipe */
+  #goldwipe { position: absolute; inset: 0; background: var(--gold); color: #0d0d0d; z-index: 30; }
+
+  /* Rows */
+  .row { position: absolute; left: 140px; width: 1640px; height: 100px; }
+  .row .n { position: absolute; left: 0; top: 30px; font-size: 30px; color: var(--gold); font-weight: 300; }
+  .row .t { position: absolute; left: 150px; top: 14px; font-size: 58px; font-weight: 700; letter-spacing: -.01em; }
+  .row .d { position: absolute; right: 0; top: 30px; font-size: 32px; font-weight: 300; color: var(--grey); }
+  .row .ln { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #3a3734; transform-origin: left; }
+
+  /* Steps */
+  .step { position: absolute; top: 380px; width: 320px; }
+  .step .n { font-size: 80px; font-weight: 200; color: var(--gold); line-height: 1; }
+  .step .t { position: absolute; top: 175px; font-size: 30px; font-weight: 700; white-space: nowrap; }
+  .step .d { position: absolute; top: 235px; width: 310px; font-size: 27px; font-weight: 300; color: var(--grey); line-height: 1.45; }
+  .dot { position: absolute; top: 494px; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); margin-left: -2px; }
+
+  /* Diff */
+  .diff { position: absolute; width: 420px; }
+  .diff .bar { width: 52px; height: 2px; background: var(--gold); transform-origin: left; margin-bottom: 26px; }
+  .diff .t { font-size: 38px; font-weight: 700; line-height: 1.2; }
+  .diff .d { margin-top: 14px; font-size: 28px; font-weight: 300; color: var(--grey); line-height: 1.45; }
+
+  /* CTA */
+  #btn { position: absolute; left: 128px; top: 616px; height: 96px; padding: 0 46px 0 50px; border-radius: 48px;
+    background: var(--gold); color: #0d0d0d; font-size: 34px; font-weight: 700; display: flex; align-items: center; gap: 22px; overflow: hidden; }
+  #btn .shine { position: absolute; top: -20px; bottom: -20px; width: 120px; left: -200px;
+    background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 100%); transform: skewX(-20deg); }
+  .ct .k { font-size: 20px; color: var(--grey); letter-spacing: .08em; font-weight: 500; }
+  .ct .v { font-size: 40px; font-weight: 400; margin-top: 4px; }
+  #cursor { position: absolute; left: 0; top: 0; width: 44px; height: 44px; z-index: 45; }
+
+  /* Preview controls (hidden in render mode) */
+  #ui { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
+    font: 13px system-ui; color: #aaa; background: rgba(20,20,20,.8); padding: 8px 14px; border-radius: 20px; z-index: 100; }
+  #ui button { background: #c9a66b; color: #111; border: 0; border-radius: 12px; padding: 4px 12px; font-weight: 600; cursor: pointer; }
+  #ui input { width: 320px; accent-color: #c9a66b; }
+  body.render #ui { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===== Persistent decor: right panel + rings ===== -->
+  <div id="panel" class="abs"></div>
+  <svg id="rings" class="abs" viewBox="0 0 1920 1080">
+    <g id="ringsG"></g>
+  </svg>
+
+  <!-- ===== S1 · Logo ===== -->
+  <div id="s1" class="scene">
+    <div id="s1tag" class="abs" style="left:128px; top:130px; font-size:24px; font-weight:500; letter-spacing:.06em; color:var(--gold)">PHOTO&nbsp;&nbsp;·&nbsp;&nbsp;VIDÉO&nbsp;&nbsp;·&nbsp;&nbsp;DIRECTION ARTISTIQUE</div>
+    <div class="abs" style="left:120px; top:360px; height:200px; overflow:hidden; padding-right:20px">
+      <div id="s1logo" class="h" style="font-size:200px; line-height:200px; letter-spacing:-.01em">SSITO</div>
+    </div>
+    <div id="s1prod" class="abs" style="left:128px; top:560px; font-size:96px; font-weight:300; line-height:1; white-space:nowrap">PRODUCTION</div>
+    <div id="s1rule" class="abs" style="left:128px; top:700px; width:124px; height:3px; background:var(--gold); transform-origin:left"></div>
+    <div id="s1quote" class="abs" style="left:128px; top:745px; font-size:38px; font-weight:300; font-style:italic; line-height:1.4">« On ne fait pas des vidéos,<br>on construit des univers. »</div>
+    <div id="s1loc" class="abs grey" style="left:128px; top:950px; font-size:22px">Mulhouse&nbsp;&nbsp;·&nbsp;&nbsp;Alsace&nbsp;&nbsp;·&nbsp;&nbsp;Bâle</div>
+  </div>
+
+  <!-- ===== Header ===== -->
+  <div id="hdr">
+    <div class="brand">SSITO PRODUCTION</div>
+    <div class="count" id="hdrCount">01 / 05</div>
+    <div class="rule" id="hdrRule"></div>
+  </div>
+
+  <!-- ===== S2 · Vision ===== -->
+  <div id="s2" class="scene">
+    <div id="s2label" class="abs label" style="left:140px; top:200px">Notre vision</div>
+    <div id="s2l1" class="abs h" style="left:136px; top:330px; font-size:128px; white-space:nowrap">On ne fait pas des vidéos,</div>
+    <div id="s2l2" class="abs h gold" style="left:136px; top:470px; font-size:128px; white-space:nowrap; color:var(--gold)">on construit des univers.</div>
+    <div id="s2pills"></div>
+  </div>
+
+  <!-- ===== S3 · Services ===== -->
+  <div id="s3" class="scene">
+    <div id="s3label" class="abs label" style="left:140px; top:200px">Nos services</div>
+    <div id="s3title" class="abs h" style="left:136px; top:250px; font-size:84px">Ce qu'on crée.</div>
+    <div id="svcs"></div>
+    <div id="ticks"></div>
+  </div>
+
+  <!-- ===== Gold statement ===== -->
+  <div id="goldwipe">
+    <div id="gwSmall" class="abs" style="left:140px; top:330px; font-size:26px; font-weight:600; letter-spacing:.1em">LA SOLUTION SSITO</div>
+    <div id="gw1" class="abs h" style="left:132px; top:390px; font-size:150px; color:#0d0d0d; white-space:nowrap">Un seul interlocuteur,</div>
+    <div id="gw2" class="abs h" style="left:132px; top:550px; font-size:150px; color:#0d0d0d; white-space:nowrap">de A à Z.</div>
+    <div id="gw3" class="abs" style="left:140px; top:760px; font-size:38px; font-weight:400">Du brief à la livraison, une seule personne suit votre projet.</div>
+  </div>
+
+  <!-- ===== S4 · Pour qui ===== -->
+  <div id="s4" class="scene">
+    <div id="s4label" class="abs label" style="left:140px; top:170px">Pour qui</div>
+    <div id="s4title" class="abs h" style="left:136px; top:220px; font-size:96px">On accompagne.</div>
+    <div id="rows"></div>
+  </div>
+
+  <!-- ===== S5 · Méthode ===== -->
+  <div id="s5" class="scene">
+    <div id="s5label" class="abs label" style="left:140px; top:170px">Notre méthode</div>
+    <div id="s5title" class="abs h" style="left:136px; top:220px; font-size:96px">Comment on travaille.</div>
+    <div id="s5line" class="abs" style="left:154px; top:507px; width:1360px; height:2px; background:var(--gold); transform-origin:left"></div>
+    <div id="steps"></div>
+  </div>
+
+  <!-- ===== S6 · Différence ===== -->
+  <div id="s6" class="scene">
+    <div id="s6label" class="abs label" style="left:140px; top:200px">Pourquoi SSITO</div>
+    <div id="s6title" class="abs h" style="left:136px; top:270px; font-size:100px">Ce qui fait<br>la différence.</div>
+    <div id="diffs"></div>
+  </div>
+
+  <!-- ===== S7 · CTA ===== -->
+  <div id="s7" class="scene">
+    <div id="s7label" class="abs label" style="left:132px; top:150px">Contact</div>
+    <div class="abs" style="left:120px; top:230px; overflow:hidden; height:170px; padding-right:30px"><div id="s7l1" class="h" style="font-size:146px; line-height:170px">Construisons</div></div>
+    <div class="abs" style="left:120px; top:385px; overflow:hidden; height:175px; padding-right:30px"><div id="s7l2" class="h" style="font-size:146px; line-height:170px">votre univers.</div></div>
+    <div id="s7rule" class="abs" style="left:132px; top:578px; width:124px; height:3px; background:var(--gold); transform-origin:left; display:none"></div>
+    <div id="btn" class="abs"><span>Prendre contact</span>
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#0d0d0d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <div class="shine"></div>
+    </div>
+    <div id="ct1" class="abs ct" style="left:132px; top:780px"><div class="k">EMAIL</div><div class="v">ssitoproduction@gmail.com</div></div>
+    <div id="ct2" class="abs ct" style="left:820px; top:780px"><div class="k">INSTAGRAM</div><div class="v">@ssitoprod</div></div>
+    <div id="s7loc" class="abs grey" style="left:132px; top:960px; font-size:22px">SSITO Production&nbsp;&nbsp;·&nbsp;&nbsp;Mulhouse&nbsp;&nbsp;·&nbsp;&nbsp;Alsace&nbsp;&nbsp;·&nbsp;&nbsp;Bâle</div>
+    <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.9z" fill="#f3efe6" stroke="#0d0d0d" stroke-width="1.2" stroke-linejoin="round"/></svg>
+  </div>
+
+  <div id="vignette"></div>
+  <div id="grain"></div>
+</div>
+
+<div id="ui"><button id="play">⏸</button><input id="scrub" type="range" min="0" max="31.5" step="0.01" value="0"><span id="tc">0.00s</span></div>
+
+<script>
+/* =========================================================
+   SSITO PRODUCTION — motion design (31.5 s, 1920×1080, 16:9)
+   Deterministic timeline: renderAt(t) draws the frame at time t.
+   Motion rules: ease-out (expo/quart) for entrances, ease-in for
+   exits, in-out for things that travel; staggered reveals; blur
+   only as a short entrance accent.
+   ========================================================= */
+const DURATION = 31.5;
+const $ = id => document.getElementById(id);
+
+/* ---------- easing & helpers ---------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const prog = (t, s, d) => clamp((t - s) / d);
+const E = {
+  outExpo: k => k === 1 ? 1 : 1 - Math.pow(2, -10 * k),
+  outQuart: k => 1 - Math.pow(1 - k, 4),
+  inCubic: k => k * k * k,
+  inOutCubic: k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2,
+  inOutQuint: k => k < .5 ? 16 * k ** 5 : 1 - Math.pow(-2 * k + 2, 5) / 2,
+  outBack: k => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); },
+};
+
+/* fx: entrance + exit on one element.
+   o = { in:[start,dur], out:[start,dur], y:[fromY,toY], x:[fromX,toX], blur:[in,out], s:[fromS,toS], ease, easeOut } */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches && !location.search.includes('render');
+function fx(el, t, o) {
+  if (REDUCED) o = { ...o, x: null, y: null, s: null, blur: null, fade: true };
+  const ki = o.in ? (o.ease || E.outExpo)(prog(t, o.in[0], o.in[1])) : 1;
+  const ko = o.out ? (o.easeOut || E.inCubic)(prog(t, o.out[0], o.out[1])) : 0;
+  const y = o.y ? lerp(o.y[0], 0, ki) + lerp(0, o.y[1] || 0, ko) : 0;
+  const x = o.x ? lerp(o.x[0], 0, ki) + lerp(0, o.x[1] || 0, ko) : 0;
+  const s = o.s ? lerp(o.s[0], 1, ki) * lerp(1, o.s[1] ?? 1, ko) : 1;
+  const b = o.blur ? lerp(o.blur[0], 0, ki) + lerp(0, o.blur[1] || 0, ko) : 0;
+  const op = (o.fade === false ? 1 : ki) * (1 - ko);
+  el.style.opacity = op;
+  el.style.visibility = op <= 0.001 ? 'hidden' : 'visible';
+  el.style.transform = `translate3d(${x}px,${y}px,0) scale(${s})`;
+  el.style.filter = b > 0.05 ? `blur(${b}px)` : 'none';
+  return ki * (1 - ko);
+}
+const show = (el, v) => { el.style.display = v ? '' : 'none'; };
+
+function splitWords(el) {
+  const html = el.innerHTML.split(/(<br>)/);
+  el.innerHTML = html.map(part => part === '<br>' ? part :
+    part.split(' ').filter(Boolean).map(w => `<span class="w">${w}</span>`).join(' ')).join('');
+  return [...el.querySelectorAll('.w')];
+}
+function splitChars(el) {
+  const txt = el.textContent; el.textContent = '';
+  return [...txt].map(c => { const s = document.createElement('span'); s.className = 'w'; s.textContent = c; el.appendChild(s); return s; });
+}
+function mk(parent, cls, html, style) {
+  const d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; if (style) d.style.cssText = style;
+  parent.appendChild(d); return d;
+}
+
+/* ---------- build DOM ---------- */
+// Rings
+const RINGS = [];
+const ringsG = $('ringsG');
+const NS = 'http://www.w3.org/2000/svg';
+for (let i = 0; i < 8; i++) {
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('fill', 'none');
+  c.setAttribute('stroke', i < 5 ? '#c9a66b' : '#8d8a85');
+  c.setAttribute('stroke-width', 1.6);
+  ringsG.appendChild(c); RINGS.push({ el: c, r: 80 + i * 52, op: [.85, .7, .55, .45, .36, .32, .24, .16][i] });
+}
+const wave = document.createElementNS(NS, 'circle');
+wave.setAttribute('fill', 'none'); wave.setAttribute('stroke', '#c9a66b'); wave.setAttribute('stroke-width', 2);
+ringsG.appendChild(wave);
+const dot = document.createElementNS(NS, 'circle');
+dot.setAttribute('fill', '#c9a66b'); ringsG.appendChild(dot);
+
+// S1
+const logoChars = splitChars($('s1logo'));
+logoChars.forEach(c => c.style.cssText = 'display:inline-block');
+
+// S2
+const s2w1 = splitWords($('s2l1'));
+const s2w2 = splitWords($('s2l2'));
+const PILLS = ['IDENTITÉ', 'ÉMOTION', 'HISTOIRE'].map((p, i) =>
+  mk($('s2pills'), 'abs', p, `left:${140 + i * 370}px; top:720px; width:340px; height:94px; border:2px solid #34312e; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:500; letter-spacing:.06em; color:var(--gold)`));
+
+// S3 services
+const SERVICES = [
+  ['Vidéo', 'Marketing, institutionnel, interview, événementiel'],
+  ['Photographie', 'Produit, culinaire, portrait, événement'],
+  ['Mariage', 'Film et photo de votre journée'],
+  ['Drone', 'Prises de vue aériennes'],
+  ['Réseaux sociaux', 'Formats mensuels, reels, posts'],
+  ['Identité & DA', 'Chartes, menus, supports de marque'],
+  ['Création IA', 'Visuels, animation, motion design'],
+];
+const SVC = SERVICES.map(([n, d], i) => {
+  const box = mk($('svcs'), 'svc', '');
+  const num = mk(box, 'num abs', String(i + 1).padStart(2, '0'));
+  const name = mk(box, 'name abs', n);
+  const desc = mk(box, 'desc abs', d);
+  return { num, name, desc };
+});
+const TICKS = SERVICES.map((s, i) => {
+  const tk = mk($('ticks'), 'tick abs', '<i></i>', `left:${140 + i * 238}px`);
+  return { el: tk, bar: tk.firstChild };
+});
+
+// S4 rows
+const CLIENTS = [
+  ['Restaurants & food', 'Commerces de bouche, cafés, restaurants'],
+  ['Marques & créateurs', 'Lancements, identité, contenu'],
+  ['Artistes', 'Image, clips, univers visuel'],
+  ['Entreprises', 'Corporate, institutionnel, formation'],
+  ['Futurs mariés', 'Le film et les photos de votre jour J'],
+];
+const ROWS = CLIENTS.map(([n, d], i) => {
+  const r = mk($('rows'), 'row', '', `top:${400 + i * 108}px`);
+  return { r, n: mk(r, 'n abs', String(i + 1).padStart(2, '0')), t: mk(r, 't abs', n), d: mk(r, 'd abs', d), ln: mk(r, 'ln abs', '') };
+});
+
+// S5 steps
+const METHOD = [
+  ['Brief & écoute', 'Votre projet, vos objectifs, votre public.'],
+  ['Direction artistique', "L'univers : ton, images, références."],
+  ['Tournage', 'Shooting sur le terrain ou en studio.'],
+  ['Post-production', 'Montage, étalonnage, son, motion.'],
+  ['Livraison', 'Fichiers finaux et déclinaisons réseaux.'],
+];
+const STEPS = METHOD.map(([t, d], i) => {
+  const x = 140 + i * 340;
+  const s = mk($('steps'), 'step', '', `left:${x}px`);
+  const n = mk(s, 'n abs', String(i + 1).padStart(2, '0'));
+  const tt = mk(s, 't abs', t);
+  const dd = mk(s, 'd abs', d);
+  const dt = mk($('steps'), 'dot abs', '', `left:${x}px`);
+  return { n, t: tt, d: dd, dot: dt };
+});
+
+// S6 diffs
+const DIFFS = [
+  ['Un interlocuteur unique', 'Du brief à la livraison, une seule personne.'],
+  ['Un ancrage local', 'Le tri-frontalier France–Suisse–Allemagne.'],
+  ['Une vraie direction artistique', 'Chaque projet a son identité. Jamais de copié-collé.'],
+  ['Tournage réel + création IA', 'Le meilleur des deux mondes pour aller plus loin.'],
+];
+const DIFF = DIFFS.map(([t, d], i) => {
+  const el = mk($('diffs'), 'diff abs', '', `left:${900 + (i % 2) * 480}px; top:${300 + Math.floor(i / 2) * 320}px`);
+  return { el, bar: mk(el, 'bar', ''), t: mk(el, 't', t), d: mk(el, 'd', d) };
+});
+
+/* ---------- scene timing ---------- */
+const T = {
+  s1: [0, 4.3], s2: [4.1, 8.7], s3: [8.6, 14.6], gold: [14.2, 17.0],
+  s4: [16.8, 20.6], s5: [20.4, 24.6], s6: [24.4, 27.6], s7: [27.4, DURATION],
+};
+const inScene = (t, k) => t >= T[k][0] - 0.01 && t <= T[k][1] + 0.01;
+
+/* ---------- renderers ---------- */
+function renderRings(t) {
+  // Intro (center → right), hidden in the middle, return for CTA.
+  const cxC = 960, cxR = 1556, cy = 540;
+  let cx, scale = 1, groupOp = 1, k;
+  if (t < 5) {
+    const move = E.inOutQuint(prog(t, 1.25, 1.0));
+    cx = lerp(cxC, cxR, move);
+    const exit = E.inCubic(prog(t, 3.75, 0.6));
+    scale = 1 + exit * 0.35; groupOp = 1 - exit;
+    k = t;
+  } else {
+    cx = cxR; k = t - T.s7[0] + 0.15;  // replay the build for the CTA
+    groupOp = t >= T.s7[0] ? 1 : 0;
+  }
+  ringsG.style.opacity = groupOp;
+  ringsG.style.transformOrigin = `${cx}px ${cy}px`;
+  ringsG.style.transform = `scale(${scale})`;
+
+  const dk = E.outQuart(prog(k, 0.0, 0.55));
+  dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.setAttribute('r', 14 * dk);
+  RINGS.forEach((R, i) => {
+    const kk = E.outExpo(prog(k, 0.2 + i * 0.075, 1.1));
+    // gentle breathing once settled
+    const breathe = 1;
+    R.el.setAttribute('cx', cx); R.el.setAttribute('cy', cy);
+    R.el.setAttribute('r', Math.max(0.01, R.r * kk * breathe));
+    R.el.setAttribute('stroke-opacity', R.op * kk);
+  });
+  // one ripple as feedback to the button click (no looping pulse)
+  const wk = prog(t, T.s7[0] + 3.15, 1.6);
+  if (wk > 0 && wk < 1) {
+    wave.setAttribute('cx', cx); wave.setAttribute('cy', cy);
+    wave.setAttribute('r', 80 + E.outQuart(wk) * 420);
+    wave.setAttribute('stroke-opacity', 0.55 * (1 - wk));
+  } else wave.setAttribute('stroke-opacity', 0);
+
+  // side panel
+  const pin = t < 5 ? E.inOutQuint(prog(t, 1.25, 1.0)) * (1 - E.inCubic(prog(t, 3.75, 0.5)))
+                    : E.inOutQuint(prog(t, T.s7[0], 0.9));
+  $('panel').style.transform = `translateX(${(1 - pin) * 740}px)`;
+}
+
+function renderS1(t) {
+  const out = [3.75, 0.5];
+  fx($('s1tag'), t, { in: [1.55, .8], out, y: [20, -16] });
+  logoChars.forEach((c, i) => fx(c, t, { in: [1.6 + i * 0.06, .9], out: [out[0] + i * 0.02, .45], y: [210, -210], fade: false, ease: E.outQuart }));
+  const pk = fx($('s1prod'), t, { in: [1.95, 1.0], out, y: [0, -16], blur: [6, 4] });
+  $('s1prod').style.letterSpacing = `${lerp(.5, .02, E.outExpo(prog(t, 1.95, 1.4)))}em`;
+  fx($('s1rule'), t, { in: [2.3, .7], out, fade: false });
+  $('s1rule').style.transform += ` scaleX(${E.outExpo(prog(t, 2.3, .7)) * (1 - E.inCubic(prog(t, out[0], out[1])))})`;
+  fx($('s1quote'), t, { in: [2.45, .9], out, y: [24, -16], blur: [6, 4] });
+  fx($('s1loc'), t, { in: [2.7, .9], out, y: [14, -16] });
+}
+
+function renderHeader(t) {
+  const vis = t >= T.s2[0] && t < T.s7[0];
+  const hdr = $('hdr');
+  fx(hdr, t, { in: [T.s2[0] + .1, .7], out: [T.s7[0] - .3, .4], y: [-16, -16] });
+  $('hdrRule').style.transform = `scaleX(${E.outExpo(prog(t, T.s2[0] + .2, 1.2))})`;
+  // dark text on the gold statement
+  const onGold = t > T.gold[0] + .45 && t < T.gold[1] - .3;
+  hdr.style.color = onGold ? '#0d0d0d' : '';
+  $('hdrRule').style.background = onGold ? 'rgba(0,0,0,.25)' : '';
+  const idx = t < T.s3[0] ? 1 : t < T.s4[0] ? 2 : t < T.s5[0] ? 3 : t < T.s6[0] ? 4 : 5;
+  $('hdrCount').textContent = `0${idx} / 05`;
+  hdr.style.display = vis ? '' : 'none';
+}
+
+function renderS2(t) {
+  const s = T.s2[0], out = [T.s2[1] - .6, .5];
+  fx($('s2label'), t, { in: [s + .15, .7], out, y: [16, -16] });
+  s2w1.forEach((w, i) => fx(w, t, { in: [s + .3 + i * .075, .9], out: [out[0] + i * .02, .45], y: [50, -16], blur: [6, 4] }));
+  s2w2.forEach((w, i) => fx(w, t, { in: [s + 1.25 + i * .09, .95], out: [out[0] + .05 + i * .02, .45], y: [50, -16], blur: [6, 4] }));
+  PILLS.forEach((p, i) => fx(p, t, { in: [s + 2.3 + i * .14, .8], out: [out[0] + .1 + i * .03, .45], y: [30, -16], s: [.96, 1] }));
+}
+
+function renderS3(t) {
+  const s = T.s3[0], out = [T.s3[1] - .5, .45];
+  fx($('s3label'), t, { in: [s + .1, .6], out, y: [16, -16] });
+  fx($('s3title'), t, { in: [s + .2, .8], out, y: [40, -16] });
+  const start = s + .7, step = .7;
+  SVC.forEach((o, i) => {
+    const a = start + i * step;
+    const last = i === SVC.length - 1;
+    const o2 = last ? out : [a + step - .05, .32];
+    fx(o.num, t, { in: [a, .55], out: o2, y: [140, -140], blur: [6, 4], ease: E.outQuart });
+    fx(o.name, t, { in: [a + .05, .6], out: o2, y: [140, -140], blur: [6, 4], ease: E.outQuart });
+    fx(o.desc, t, { in: [a + .15, .55], out: last ? out : [a + step - .22, .2], y: [40, -16] });
+  });
+  TICKS.forEach((tk, i) => {
+    fx(tk.el, t, { in: [s + .5 + i * .04, .5], out, y: [12, 0] });
+    tk.bar.style.transform = `scaleX(${E.outQuart(prog(t, start + i * step, step))})`;
+  });
+}
+
+function renderGold(t) {
+  const g = $('goldwipe');
+  const [s, e] = T.gold;
+  if (t < s || t > e) { g.style.display = 'none'; return; }
+  g.style.display = '';
+  // grow from the "8th card" position to full frame, then collapse into a line
+  const kin = E.inOutQuint(prog(t, s, .85));
+  const kout = E.inOutQuint(prog(t, e - .7, .65));
+  const top = lerp(700, 0, kin), right = lerp(140, 0, kin), bottom = lerp(150, 0, kin), left = lerp(1430, 0, kin);
+  const ct = lerp(top, 539, kout), cb = lerp(bottom, 539, kout);
+  g.style.clipPath = `inset(${ct}px ${right}px ${cb}px ${left}px)`;
+  const out = [e - .85, .35];
+  fx($('gwSmall'), t, { in: [s + .6, .6], out, y: [16, -16] });
+  fx($('gw1'), t, { in: [s + .7, .8], out, y: [60, -16], blur: [6, 4] });
+  fx($('gw2'), t, { in: [s + .85, .8], out, y: [60, -16], blur: [6, 4] });
+  fx($('gw3'), t, { in: [s + 1.15, .8], out, y: [24, -16] });
+}
+
+function renderS4(t) {
+  const s = T.s4[0], e = T.s4[1];
+  fx($('s4label'), t, { in: [s + .2, .6], out: [e - .55, .4], y: [16, -16] });
+  fx($('s4title'), t, { in: [s + .25, .8], out: [e - .55, .4], y: [40, -16] });
+  ROWS.forEach((r, i) => {
+    const a = s + .55 + i * .14;
+    const out = [e - .65 + i * .05, .45];
+    fx(r.n, t, { in: [a, .7], out, x: [60, -16] });
+    fx(r.t, t, { in: [a + .03, .8], out, x: [90, -16], blur: [6, 4] });
+    fx(r.d, t, { in: [a + .12, .8], out, x: [60, -16] });
+    r.ln.style.transform = `scaleX(${E.outExpo(prog(t, a, 1.1)) * (1 - E.inCubic(prog(t, out[0], out[1])))})`;
+  });
+}
+
+function renderS5(t) {
+  const s = T.s5[0], e = T.s5[1], out = [e - .55, .45];
+  fx($('s5label'), t, { in: [s + .15, .6], out, y: [16, -16] });
+  fx($('s5title'), t, { in: [s + .2, .8], out, y: [40, -16] });
+  const ls = s + .65, ld = 2.0;
+  const lk = E.inOutCubic(prog(t, ls, ld));
+  const line = $('s5line');
+  fx(line, t, { out, fade: true });
+  line.style.opacity = 1 - E.inCubic(prog(t, out[0], out[1]));
+  line.style.transform = `scaleX(${lk})`;
+  STEPS.forEach((st, i) => {
+    const hit = ls + ld * (i / 4) * 0.98 - .1;
+    const o2 = [out[0] + i * .03, out[1]];
+    fx(st.dot, t, { in: [hit, .45], out: o2, s: [.6, .8], ease: E.outQuart });
+    fx(st.n, t, { in: [hit - .1, .7], out: o2, y: [40, -16] });
+    fx(st.t, t, { in: [hit + .05, .7], out: o2, y: [30, -16] });
+    fx(st.d, t, { in: [hit + .15, .7], out: o2, y: [20, -16] });
+  });
+}
+
+function renderS6(t) {
+  const s = T.s6[0], e = T.s6[1], out = [e - .55, .45];
+  fx($('s6label'), t, { in: [s + .15, .6], out, y: [16, -16] });
+  fx($('s6title'), t, { in: [s + .2, .9], out, y: [50, -16], blur: [6, 4] });
+  DIFF.forEach((d, i) => {
+    const a = s + .55 + i * .22;
+    const o2 = [out[0] + i * .03, out[1]];
+    fx(d.el, t, { in: [a, .8], out: o2, y: [40, -16] });
+    d.bar.style.transform = `scaleX(${E.outExpo(prog(t, a + .1, .8))})`;
+  });
+}
+
+function renderS7(t) {
+  const s = T.s7[0];
+  fx($('s7label'), t, { in: [s + .5, .6], y: [16, 0] });
+  fx($('s7l1'), t, { in: [s + .55, 1.0], y: [180, 0], fade: false, ease: E.outQuart });
+  fx($('s7l2'), t, { in: [s + .7, 1.0], y: [180, 0], fade: false, ease: E.outQuart });
+  const btn = $('btn');
+  // button entrance + click press
+  const press = t > s + 3.05 && t < s + 3.25 ? .95 : 1;
+  fx(btn, t, { in: [s + 1.15, .8], y: [24, 0], s: [.94, 1], ease: E.outQuart });
+  if (t > s + 1.15) btn.style.transform += ` scale(${press})`;
+  btn.querySelector('.shine').style.left = `${lerp(-200, 560, E.inOutCubic(prog(t, s + 1.9, .9)))}px`;
+  // click glow ring
+  const ck = prog(t, s + 3.15, .7);
+  btn.style.boxShadow = ck > 0 && ck < 1 ? `0 0 0 ${E.outQuart(ck) * 26}px rgba(201,166,107,${.45 * (1 - ck)})` : 'none';
+  fx($('ct1'), t, { in: [s + 1.45, .8], y: [24, 0] });
+  fx($('ct2'), t, { in: [s + 1.6, .8], y: [24, 0] });
+  fx($('s7loc'), t, { in: [s + 1.8, .8], y: [14, 0] });
+  // cursor glides to the button and clicks
+  const c = $('cursor');
+  const ckm = E.inOutCubic(prog(t, s + 2.15, .9));
+  const cx = lerp(820, 470, ckm), cy = lerp(1000, 668, ckm);
+  const cs = t > s + 3.05 && t < s + 3.25 ? .85 : 1;
+  c.style.opacity = clamp((t - s - 2.1) / .3) * (1 - clamp((t - s - 3.9) / .4));
+  c.style.transform = `translate(${cx}px,${cy}px) scale(${cs})`;
+}
+
+/* ---------- master ---------- */
+const SCENES = [['s1', renderS1], ['s2', renderS2], ['s3', renderS3], ['s4', renderS4], ['s5', renderS5], ['s6', renderS6], ['s7', renderS7]];
+function renderAt(t) {
+  t = clamp(t, 0, DURATION);
+  renderRings(t);
+  SCENES.forEach(([k, fn]) => { const on = inScene(t, k); show($(k), on); if (on) fn(t); });
+  renderGold(t);
+  renderHeader(t);
+  // drifting film grain (deterministic per frame)
+  const f = Math.floor(t * 24);
+  $('grain').style.transform = `translate(${(f * 37) % 100 - 50}px, ${(f * 61) % 100 - 50}px)`;
+  // global fade from black / subtle camera push
+  $('stage').style.filter = `brightness(${E.outQuart(prog(t, 0, .4))})`;
+}
+window.renderAt = renderAt;
+window.DURATION = DURATION;
+
+/* ---------- preview player ---------- */
+const params = new URLSearchParams(location.search);
+const stage = $('stage');
+function fit() {
+  if (document.body.classList.contains('render')) return;
+  const k = Math.min(innerWidth / 1920, (innerHeight - 50) / 1080);
+  stage.style.transform = `scale(${k})`;
+  stage.style.margin = `${(1080 * k - 1080) / 2}px ${(1920 * k - 1920) / 2}px`;
+}
+if (params.has('render')) {
+  document.body.classList.add('render');
+  document.body.style.display = 'block';
+  renderAt(0);
+} else {
+  fit(); addEventListener('resize', fit);
+  let playing = true, t0 = performance.now(), cur = 0;
+  const scrub = $('scrub'), tc = $('tc'), btn = $('play');
+  btn.onclick = () => { playing = !playing; btn.textContent = playing ? '⏸' : '▶'; t0 = performance.now() - cur * 1000; };
+  scrub.oninput = () => { cur = +scrub.value; t0 = performance.now() - cur * 1000; renderAt(cur); tc.textContent = cur.toFixed(2) + 's'; };
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
+    (function loop(now) {
+      if (playing) { cur = ((now - t0) / 1000) % DURATION; renderAt(cur); scrub.value = cur; tc.textContent = cur.toFixed(2) + 's'; }
+      requestAnimationFrame(loop);
+    })(performance.now());
+  });
+}
+</script>
+</body>
+</html>
